@@ -1,192 +1,374 @@
 import React, { useState, useEffect, useRef } from 'react'
 import './App.css'
+import '../src/stylesheets/GameUI.css'
 
 function App() {
   const [gameStarted, setGameStarted] = useState(false)
   const [score, setScore] = useState(0)
   const [level, setLevel] = useState(1)
   const [lives, setLives] = useState(3)
-  const [casting, setCasting] = useState(false)
-  const [hookPos, setHookPos] = useState({ x: 300, y: 150 })
-  const [lineActive, setLineActive] = useState(false)
+  const [castingActive, setCastingActive] = useState(false)
+  const [leverPosition, setLeverPosition] = useState(0)
   const [fish, setFish] = useState([])
-  const [feedback, setFeedback] = useState('')
-  const canvasRef = useRef()
+  const [feedback, setFeedback] = useState({ show: false, type: '', message: '' })
+  const [isPaused, setIsPaused] = useState(false)
+  const [fishermanState, setFishermanState] = useState('idle')
   const animationRef = useRef()
+  const leverAnimationRef = useRef()
+
+  // Game data for stats
+  const [gameData] = useState({
+    highScore: Math.max(2850, score),
+    bestLevel: Math.max(7, level),
+    totalFishCaught: 142
+  })
+
+  const fishTypes = [
+    { name: 'Common Fish', img: '/src/assets/common1.png', points: 10, size: 25, color: '#4ecdc4' },
+    { name: 'Common Fish', img: '/src/assets/common2.png', points: 10, size: 25, color: '#4ecdc4' },
+    { name: 'Common Fish', img: '/src/assets/common3.png', points: 10, size: 25, color: '#4ecdc4' },
+    { name: 'Rare Fish', img: '/src/assets/rare1.png', points: 25, size: 30, color: '#45b7d1' },
+    { name: 'Rare Fish', img: '/src/assets/rare2.png', points: 25, size: 30, color: '#45b7d1' },
+    { name: 'Epic Fish', img: '/src/assets/epic1.png', points: 50, size: 35, color: '#f39c12' },
+    { name: 'Epic Fish', img: '/src/assets/epic2.png', points: 50, size: 35, color: '#f39c12' },
+    { name: 'Legendary Fish', img: '/src/assets/legendary1.png', points: 100, size: 40, color: '#e74c3c' }
+  ]
 
   const startGame = () => {
     setGameStarted(true)
+    setScore(0)
+    setLevel(1)
+    setLives(3)
+    setFeedback({ show: false, type: '', message: '' })
+    setCastingActive(false)
+    setFishermanState('idle')
     initFish()
   }
 
-  const fishTypes = [
-    { img: '/src/assets/common1.png', points: 10, size: 30 },
-    { img: '/src/assets/common2.png', points: 10, size: 30 },
-    { img: '/src/assets/common3.png', points: 10, size: 30 },
-    { img: '/src/assets/rare1.png', points: 25, size: 35 },
-    { img: '/src/assets/rare2.png', points: 25, size: 35 },
-    { img: '/src/assets/rare3.png', points: 25, size: 35 },
-    { img: '/src/assets/epic1.png', points: 50, size: 40 },
-    { img: '/src/assets/epic2.png', points: 50, size: 40 },
-    { img: '/src/assets/epic3.png', points: 50, size: 40 },
-    { img: '/src/assets/legendary1.png', points: 100, size: 45 }
-  ]
+  const pauseGame = () => {
+    setIsPaused(!isPaused)
+  }
+
+  const showLeaderboard = () => {
+    alert('Leaderboard feature coming soon!')
+  }
 
   const initFish = () => {
+    const fishCount = Math.min(3 + level, 8)
     const newFish = []
-    for (let i = 0; i < 3 + level; i++) {
-      const fishType = fishTypes[Math.floor(Math.random() * fishTypes.length)]
+    
+    for (let i = 0; i < fishCount; i++) {
+      const fishType = fishTypes[Math.floor(Math.random() * Math.min(fishTypes.length, level + 2))]
       newFish.push({
         id: i,
-        x: Math.random() * 500 + 50,
-        y: Math.random() * 200 + 50,
-        dx: (Math.random() - 0.5) * 2,
-        dy: (Math.random() - 0.5) * 2,
+        x: Math.random() * 300 + 50, // Pond width adjusted
+        y: Math.random() * 120 + 40, // Pond height adjusted  
+        dx: (Math.random() - 0.5) * 1.5,
+        dy: (Math.random() - 0.5) * 1.5,
         ...fishType
       })
     }
     setFish(newFish)
   }
 
+  // Start casting - begin lever movement
   const startCasting = () => {
-    setLineActive(true)
-    setHookPos({ x: 300, y: 150 })
+    if (gameStarted && !castingActive && !isPaused) {
+      setCastingActive(true)
+      setLeverPosition(0)
+    }
   }
 
-  const catchFish = () => {
-    if (!lineActive) return
-    setCasting(true)
+  // Cast - attempt to catch fish
+  const handleCast = () => {
+    if (!castingActive) return
     
+    setCastingActive(false)
+    setFishermanState('casting')
+
+    // Check for fish at lever position with some tolerance
+    const catchRadius = 40
     const caughtFish = fish.find(f => 
-      Math.abs(f.x - hookPos.x) < 50 && Math.abs(f.y - hookPos.y) < 50
+      Math.abs(f.x - leverPosition) < catchRadius && 
+      Math.abs(f.y - 80) < catchRadius // Center of pond area
     )
-    
+
     setTimeout(() => {
       if (caughtFish) {
-        setScore(prev => prev + caughtFish.points)
+        const points = caughtFish.points * level
+        setScore(prev => prev + points)
         setFish(prev => prev.filter(f => f.id !== caughtFish.id))
-        setFeedback(`🎉 Fish Caught! +${caughtFish.points} points`)
-        if (fish.length <= 1) {
-          setLevel(prev => prev + 1)
-          setTimeout(initFish, 1000)
+        setFeedback({
+          show: true,
+          type: 'success',
+          message: `🎉 ${caughtFish.name} caught! +${points} points`
+        })
+
+        // Level up if few fish remain
+        if (fish.length <= 2) {
+          setTimeout(() => {
+            setLevel(prev => prev + 1)
+            initFish()
+          }, 1000)
         }
       } else {
         setLives(prev => prev - 1)
-        setFeedback('❌ Missed! -1 life')
+        setFeedback({
+          show: true,
+          type: 'miss',
+          message: '❌ Missed! -1 life'
+        })
+
+        // Game over check
+        if (lives <= 1) {
+          setTimeout(() => {
+            setGameStarted(false)
+          }, 1500)
+        }
       }
-      setCasting(false)
-      setLineActive(false)
-      setTimeout(() => setFeedback(''), 2000)
+
+      setFishermanState('idle')
+      setTimeout(() => setFeedback({ show: false, type: '', message: '' }), 2000)
     }, 1000)
   }
 
+  // Lever animation
   useEffect(() => {
-    if (!gameStarted) return
-    const animate = () => {
-      setFish(prev => prev.map(f => ({
-        ...f,
-        x: f.x + f.dx,
-        y: f.y + f.dy,
-        dx: f.x <= 20 || f.x >= 580 ? -f.dx : f.dx,
-        dy: f.y <= 20 || f.y >= 280 ? -f.dy : f.dy
-      })))
-      
-      if (lineActive) {
-        setHookPos(prev => ({
-          x: prev.x + Math.sin(Date.now() * 0.003) * 2,
-          y: prev.y + Math.cos(Date.now() * 0.002) * 1.5
-        }))
+    if (castingActive && !isPaused) {
+      const animateLever = () => {
+        setLeverPosition(prev => {
+          const newPos = prev + 2
+          return newPos > 400 ? 0 : newPos // Reset at pond width
+        })
+        leverAnimationRef.current = requestAnimationFrame(animateLever)
       }
-      
-      animationRef.current = requestAnimationFrame(animate)
+      leverAnimationRef.current = requestAnimationFrame(animateLever)
     }
-    animationRef.current = requestAnimationFrame(animate)
-    return () => cancelAnimationFrame(animationRef.current)
-  }, [gameStarted, lineActive])
+    return () => {
+      if (leverAnimationRef.current) {
+        cancelAnimationFrame(leverAnimationRef.current)
+      }
+    }
+  }, [castingActive, isPaused])
 
-  if (!gameStarted) {
-    return (
-      <div style={{ width: '100vw', height: '100vh', background: 'linear-gradient(to bottom, #87CEEB 0%, #98FB98 30%, #228B22 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <h1 style={{ color: 'white', fontSize: '3rem', marginBottom: '2rem', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>🎣 Fishing Game</h1>
-        <p style={{ color: 'white', fontSize: '1.2rem', marginBottom: '2rem', textAlign: 'center' }}>Time your cast to catch fish!<br/>Watch the red line and click Cast when it's over a fish.</p>
-        <button onClick={startGame} style={{ padding: '20px 40px', fontSize: '24px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '15px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(0,0,0,0.3)', transition: 'transform 0.2s' }} onMouseOver={e => e.target.style.transform = 'scale(1.05)'} onMouseOut={e => e.target.style.transform = 'scale(1)'}>
-          🚀 Start Fishing
-        </button>
-      </div>
-    )
-  }
+  // Fish movement animation
+  useEffect(() => {
+    if (gameStarted && !isPaused) {
+      const animateFish = () => {
+        setFish(prev => prev.map(f => ({
+          ...f,
+          x: f.x + f.dx,
+          y: f.y + f.dy,
+          dx: f.x <= 20 || f.x >= 380 ? -f.dx : f.dx, // Bounce off pond edges
+          dy: f.y <= 20 || f.y >= 160 ? -f.dy : f.dy
+        })))
+        animationRef.current = requestAnimationFrame(animateFish)
+      }
+      animationRef.current = requestAnimationFrame(animateFish)
+    }
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current)
+      }
+    }
+  }, [gameStarted, isPaused])
 
-  if (lives <= 0) {
+  // Initialize fish for menu display
+  useEffect(() => {
+    if (!gameStarted) {
+      initFish()
+    }
+  }, [gameStarted])
+
+  // Main menu state
+  if (!gameStarted || lives <= 0) {
     return (
-      <div style={{ width: '100vw', height: '100vh', background: 'linear-gradient(to bottom, #e74c3c 0%, #c0392b 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-        <h1 style={{ color: 'white', fontSize: '3rem', marginBottom: '1rem' }}>🎮 Game Over!</h1>
-        <p style={{ color: 'white', fontSize: '1.5rem', marginBottom: '1rem' }}>Final Score: {score}</p>
-        <p style={{ color: 'white', fontSize: '1.2rem', marginBottom: '2rem' }}>Level Reached: {level}</p>
-        <button onClick={() => { setGameStarted(false); setScore(0); setLevel(1); setLives(3); }} style={{ padding: '15px 30px', fontSize: '20px', background: '#27ae60', color: 'white', border: 'none', borderRadius: '10px', cursor: 'pointer' }}>
-          🔄 Play Again
-        </button>
+      <div className="game-container">
+        {/* Interactive Pond */}
+        <div className="pond fishing-pond">
+          {/* Lily pads */}
+          <div className="lily-pad lily-pad-1"></div>
+          <div className="lily-pad lily-pad-2"></div>
+          <div className="lily-pad lily-pad-3"></div>
+          <div className="lily-pad lily-pad-4"></div>
+
+          {/* Menu fish swimming */}
+          {fish.map(f => (
+            <div
+              key={f.id} 
+              className="fish menu-fish"
+              style={{ 
+                left: f.x + 'px', 
+                top: f.y + 'px', 
+                width: f.size + 'px', 
+                height: f.size + 'px',
+                backgroundColor: f.color,
+                borderRadius: '50%'
+              }} 
+            />
+          ))}
+
+          {/* Fishing rod on pond edge */}
+          <div className="pond-fishing-rod">
+            <div className="rod-handle"></div>
+          </div>
+        </div>
+
+        <div className="wooden-pier"></div>
+
+        {lives <= 0 ? (
+          <div className="game-over">
+            <h2>Game Over!</h2>
+            <p>Final Score: {score}</p>
+            <p>Level Reached: {level}</p>
+            <button onClick={startGame} className="restart-btn">
+              Play Again
+            </button>
+          </div>
+        ) : (
+          <div className="game-menu">
+            <h1 className="game-title">🎣 Fishing Game</h1>
+            <p className="game-subtitle">Time your cast to catch fish!</p>
+            
+            <div className="menu-buttons">
+              <button onClick={startGame} className="start-btn">
+                Start Game
+              </button>
+              <button onClick={showLeaderboard} className="leaderboard-btn">
+                🏆 Leaderboard
+              </button>
+            </div>
+
+            <div className="player-stats">
+              <h4>Your Best:</h4>
+              <p>High Score: {gameData.highScore}</p>
+              <p>Best Level: {gameData.bestLevel}</p>
+              <p>Total Fish: {gameData.totalFishCaught}</p>
+            </div>
+
+            <div className="instructions">
+              <h3>How to Play:</h3>
+              <p>• Click "Ready to Cast" to start the lever</p>
+              <p>• Click "Cast!" when the lever is over fish</p>
+              <p>• Catch fish to score points and advance levels</p>
+              <p>• Higher levels have rarer fish but reduced visibility</p>
+            </div>
+          </div>
+        )}
       </div>
     )
   }
 
   return (
-    <div style={{ width: '100vw', height: '100vh', background: 'linear-gradient(to bottom, #87CEEB 0%, #98FB98 30%, #228B22 100%)', position: 'relative' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', padding: '20px', color: 'white', fontSize: '18px', background: 'rgba(0,0,0,0.3)' }}>
-        <div>💰 Score: {score}</div>
-        <div>🎯 Level: {level}</div>
-        <div>❤️ Lives: {lives}</div>
-      </div>
-      
-      <div style={{ width: '600px', height: '300px', background: 'rgba(0,100,200,0.6)', margin: '30px auto', position: 'relative', border: '4px solid #654321', borderRadius: '10px', overflow: 'hidden' }}>
-        {lineActive && (
-          <>
-            <div style={{ position: 'absolute', left: '20px', top: '10px', width: '30px', height: '40px', background: '#8b4513', borderRadius: '5px 5px 0 0', zIndex: 5 }}>
-              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', width: '15px', height: '15px', background: '#fdbcb4', borderRadius: '50%' }}></div>
-              <div style={{ position: 'absolute', top: '5px', right: '-5px', width: '2px', height: '15px', background: '#654321', transformOrigin: 'bottom', transform: `rotate(${Math.atan2(hookPos.y - 25, hookPos.x - 35) * 180 / Math.PI}deg)` }}></div>
+    <div className="game-container">
+      {/* Interactive Pond - Main Game */}
+      <div className="pond fishing-pond">
+        {/* Lily pads */}
+        <div className="lily-pad lily-pad-1"></div>
+        <div className="lily-pad lily-pad-2"></div>
+        <div className="lily-pad lily-pad-3"></div>
+        
+        {/* Casting lever indicator */}
+        {castingActive && (
+          <div className="lever-indicator">
+            <div 
+              className="lever-position"
+              style={{ 
+                left: leverPosition + 'px',
+                top: '10px'
+              }}
+            >
+              ⬇️
             </div>
-            <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 8 }}>
-              <line x1="35" y1="25" x2={hookPos.x} y2={hookPos.y} stroke="#654321" strokeWidth="2" />
-            </svg>
-            <div style={{ position: 'absolute', left: hookPos.x - 8 + 'px', top: hookPos.y - 8 + 'px', width: '16px', height: '16px', background: '#c0392b', borderRadius: '50%', border: '2px solid #fff', boxShadow: '0 0 10px rgba(192,57,43,0.8)', zIndex: 10 }}></div>
-          </>
+            <div 
+              className="lever-line"
+              style={{ 
+                left: leverPosition + 'px'
+              }}
+            ></div>
+          </div>
         )}
         
+        {/* Fish swimming in pond */}
         {fish.map(f => (
-          <img key={f.id} src={f.img} alt="fish" style={{ position: 'absolute', left: f.x + 'px', top: f.y + 'px', width: f.size + 'px', height: f.size + 'px', transition: 'all 0.1s', imageRendering: 'pixelated' }} />
+          <div
+            key={f.id} 
+            className="fish pond-fish"
+            style={{ 
+              left: f.x + 'px', 
+              top: f.y + 'px', 
+              width: f.size + 'px', 
+              height: f.size + 'px',
+              backgroundColor: f.color,
+              borderRadius: '50%',
+              opacity: Math.max(0.6, 1 - (level - 1) * 0.1) // Harder to see at higher levels
+            }} 
+          />
         ))}
-        
 
+        {/* Fisherman */}
+        <div className={`fisherman ${fishermanState}`}>
+          <div className="fisherman-body"></div>
+          <div className="fisherman-head"></div>
+          {fishermanState === 'casting' && <div className="fishing-rod-active"></div>}
+        </div>
       </div>
+
+      {/* Game Stats */}
+      <div className="game-ui">
+        <div className="stats">
+          <div className="stat">
+            <span className="label">Score:</span>
+            <span className="value">{score}</span>
+          </div>
+          <div className="stat">
+            <span className="label">Level:</span>
+            <span className="value">{level}</span>
+          </div>
+          <div className="stat">
+            <span className="label">Lives:</span>
+            <span className="value">{'❤️'.repeat(lives)}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Pause Button */}
+      <button onClick={pauseGame} className="pause-btn">
+        {isPaused ? '▶️' : '⏸️'}
+      </button>
       
-      {feedback && (
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.8)', color: 'white', padding: '20px', borderRadius: '10px', fontSize: '20px', zIndex: 20 }}>
-          {feedback}
+      {/* Feedback */}
+      {feedback.show && (
+        <div className={`feedback ${feedback.type}`}>
+          {feedback.message}
         </div>
       )}
       
-      <div style={{ textAlign: 'center', marginTop: '20px' }}>
-        {!lineActive ? (
-          <button onClick={startCasting} style={{ padding: '15px 40px', fontSize: '20px', background: 'linear-gradient(45deg, #3498db, #2980b9)', color: 'white', border: 'none', borderRadius: '25px', cursor: 'pointer', boxShadow: '0 4px 15px rgba(52,152,219,0.4)', animation: 'pulse 2s infinite' }}>
-            🎯 Start Fishing
+      {/* Casting Controls */}
+      <div className="casting-controls">
+        {!castingActive ? (
+          <button onClick={startCasting} className="ready-cast-btn">
+            🎯 Ready to Cast
           </button>
         ) : (
-          <button onClick={catchFish} disabled={casting} style={{ padding: '15px 40px', fontSize: '20px', background: casting ? '#95a5a6' : 'linear-gradient(45deg, #e74c3c, #c0392b)', color: 'white', border: 'none', borderRadius: '25px', cursor: casting ? 'not-allowed' : 'pointer', boxShadow: '0 4px 15px rgba(231,76,60,0.6)', animation: casting ? 'none' : 'glow 1s infinite alternate' }}>
-            {casting ? '⏳ Catching...' : '🎣 CATCH!'}
-          </button>
+          <div className="casting-active">
+            <button onClick={handleCast} className="cast-btn">
+              🎣 Cast!
+            </button>
+            <div className="timing-hint">
+              Time your cast when the marker is over fish!
+            </div>
+          </div>
         )}
       </div>
-      
-      <style>{`
-        @keyframes pulse {
-          0% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-          100% { transform: scale(1); }
-        }
-        @keyframes glow {
-          0% { box-shadow: 0 4px 15px rgba(231,76,60,0.6); }
-          100% { box-shadow: 0 4px 15px rgba(231,76,60,0.9), 0 0 20px rgba(231,76,60,0.5); }
-        }
-      `}</style>
+
+      {/* Pause Overlay */}
+      {isPaused && (
+        <div className="pause-overlay">
+          <h2>Game Paused</h2>
+          <button onClick={pauseGame}>Resume</button>
+        </div>
+      )}
     </div>
   )
 }

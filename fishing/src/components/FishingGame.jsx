@@ -34,7 +34,7 @@ const FishingGame = () => {
   const initializeFish = useCallback(() => {
     const fishCount = Math.min(3 + gameState.level, 8);
     const newFish = [];
-    
+
     for (let i = 0; i < fishCount; i++) {
       const fishType = fishTypes[Math.floor(Math.random() * Math.min(fishTypes.length, gameState.level + 1))];
       newFish.push({
@@ -53,8 +53,18 @@ const FishingGame = () => {
   }, [gameState.level]);
 
   // Start game
+  // In FishingGame.jsx - Fix the startGame function
   const startGame = () => {
-    setGameState(prev => ({ ...prev, isPlaying: true, gameOver: false }));
+    setGameState(prev => ({
+      ...prev,
+      score: 0,
+      level: 1,
+      lives: 3,
+      isPlaying: true,
+      gameOver: false
+    }));
+    setTotalFishCaught(0);
+    setCastingActive(false);
     initializeFish();
   };
 
@@ -81,7 +91,7 @@ const FishingGame = () => {
   useEffect(() => {
     if (gameState.isPlaying && !gameState.isPaused) {
       const animateFish = () => {
-        setFish(prevFish => 
+        setFish(prevFish =>
           prevFish.map(f => {
             let newX = f.x + Math.cos(f.direction) * f.speed;
             let newY = f.y + Math.sin(f.direction) * f.speed;
@@ -125,8 +135,8 @@ const FishingGame = () => {
 
     // Check for fish at lever position
     const catchRadius = 40;
-    const caughtFish = fish.find(f => 
-      Math.abs(f.x - leverPosition) < catchRadius && 
+    const caughtFish = fish.find(f =>
+      Math.abs(f.x - leverPosition) < catchRadius &&
       Math.abs(f.y - (gameConfig.pondTop + gameConfig.pondHeight / 2)) < catchRadius
     );
 
@@ -138,7 +148,7 @@ const FishingGame = () => {
         setFish(prev => prev.filter(f => f.id !== caughtFish.id));
         setTotalFishCaught(prev => prev + 1);
         setFeedback({ show: true, type: 'success', message: `+${points} points!` });
-        
+
         // Check level progression
         if (fish.length <= 1) {
           setTimeout(() => {
@@ -150,7 +160,7 @@ const FishingGame = () => {
         // Miss
         setGameState(prev => ({ ...prev, lives: prev.lives - 1 }));
         setFeedback({ show: true, type: 'miss', message: 'Missed!' });
-        
+
         // Check game over
         if (gameState.lives <= 1) {
           setGameState(prev => ({ ...prev, gameOver: true, isPlaying: false }));
@@ -166,7 +176,7 @@ const FishingGame = () => {
           }).catch(console.error);
         }
       }
-      
+
       setFishermanState('idle');
       setTimeout(() => setFeedback({ show: false, type: '', message: '' }), 2000);
     }, 1000);
@@ -179,17 +189,18 @@ const FishingGame = () => {
     }
   };
 
+  // Make sure components are properly layered
   return (
     <div className="fishing-game">
-      <GameCanvas 
+      <GameCanvas
         fish={fish}
         leverPosition={leverPosition}
         castingActive={castingActive}
         fishermanState={fishermanState}
         level={gameState.level}
       />
-      
-      <GameUI 
+
+      <GameUI
         gameState={gameState}
         gameData={gameData}
         feedback={feedback}
@@ -197,15 +208,15 @@ const FishingGame = () => {
         onPauseGame={() => setGameState(prev => ({ ...prev, isPaused: !prev.isPaused }))}
         onShowLeaderboard={() => setShowLeaderboard(true)}
       />
-      
-      <CastingMechanic 
+
+      <CastingMechanic
         castingActive={castingActive}
         onStartCasting={startCasting}
         onCast={handleCast}
         leverPosition={leverPosition}
       />
-      
-      <Leaderboard 
+
+      <Leaderboard
         show={showLeaderboard}
         onClose={() => setShowLeaderboard(false)}
       />

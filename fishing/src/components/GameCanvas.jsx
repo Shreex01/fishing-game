@@ -71,30 +71,33 @@ const GameCanvas = ({ fish, leverPosition, castingActive, fishermanState, level 
     return colors[type] || '#4ecdc4';
   };
 
-  const drawFisherman = (ctx, state) => {
-    const x = 50;
-    const y = gameConfig.pondTop - 50;
-    
-    // Simple fisherman sprite
-    ctx.fillStyle = '#8b4513';
-    ctx.fillRect(x - 5, y, 10, 30); // Body
-    
-    ctx.fillStyle = '#fdbcb4';
-    ctx.beginPath();
-    ctx.arc(x, y - 5, 8, 0, Math.PI * 2); // Head
-    ctx.fill();
-    
-    // Fishing rod
-    if (state === 'casting') {
-      ctx.strokeStyle = '#654321';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(x + 5, y - 5);
-      ctx.lineTo(x + 30, y - 20);
-      ctx.stroke();
-    }
-  };
-
+const drawFisherman = (ctx, state) => {
+  const x = 50;
+  const y = gameConfig.pondTop - 80; // Move higher to be more visible
+  
+  // Body
+  ctx.fillStyle = '#8b4513';
+  ctx.fillRect(x - 5, y, 10, 30);
+  
+  // Head
+  ctx.fillStyle = '#fdbcb4';
+  ctx.beginPath();
+  ctx.arc(x, y - 5, 8, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Fishing rod - make it more visible
+  ctx.strokeStyle = '#654321';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(x + 5, y - 5);
+  
+  if (state === 'casting') {
+    ctx.lineTo(leverPosition, gameConfig.pondTop + 50); // Cast to lever position
+  } else {
+    ctx.lineTo(x + 30, y - 20); // Idle position
+  }
+  ctx.stroke();
+};
   return (
     <canvas 
       ref={canvasRef}
