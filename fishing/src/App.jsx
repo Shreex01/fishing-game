@@ -20,16 +20,16 @@ function App() {
   }
 
   const fishTypes = [
-    { img: '/src/assets/common1.png', points: 10, size: 30 },
-    { img: '/src/assets/common2.png', points: 10, size: 30 },
-    { img: '/src/assets/common3.png', points: 10, size: 30 },
-    { img: '/src/assets/rare1.png', points: 25, size: 35 },
-    { img: '/src/assets/rare2.png', points: 25, size: 35 },
-    { img: '/src/assets/rare3.png', points: 25, size: 35 },
-    { img: '/src/assets/epic1.png', points: 50, size: 40 },
-    { img: '/src/assets/epic2.png', points: 50, size: 40 },
-    { img: '/src/assets/epic3.png', points: 50, size: 40 },
-    { img: '/src/assets/legendary1.png', points: 100, size: 45 }
+    { img: 'common1.png', points: 10, size: 30 },
+    { img: 'common2.png', points: 10, size: 30 },
+    { img: 'common3.png', points: 10, size: 30 },
+    { img: 'rare1.png', points: 25, size: 35 },
+    { img: 'rare2.png', points: 25, size: 35 },
+    { img: 'rare3.png', points: 25, size: 35 },
+    { img: 'epic1.png', points: 50, size: 40 },
+    { img: 'epic2.png', points: 50, size: 40 },
+    { img: 'epic3.png', points: 50, size: 40 },
+    { img: 'legendary1.png', points: 100, size: 45 }
   ]
 
   const initFish = () => {
@@ -38,10 +38,10 @@ function App() {
       const fishType = fishTypes[Math.floor(Math.random() * fishTypes.length)]
       newFish.push({
         id: i,
-        x: Math.random() * 500 + 50,
-        y: Math.random() * 200 + 50,
-        dx: (Math.random() - 0.5) * 2,
-        dy: (Math.random() - 0.5) * 2,
+        x: Math.random() * 480 + 60,
+        y: Math.random() * 180 + 60,
+        dx: (Math.random() - 0.5) * 3,
+        dy: (Math.random() - 0.5) * 3,
         ...fishType
       })
     }
@@ -58,7 +58,7 @@ function App() {
     setCasting(true)
     
     const caughtFish = fish.find(f => 
-      Math.abs(f.x - hookPos.x) < 50 && Math.abs(f.y - hookPos.y) < 50
+      Math.abs(f.x - hookPos.x) < 60 && Math.abs(f.y - hookPos.y) < 60
     )
     
     setTimeout(() => {
@@ -87,14 +87,14 @@ function App() {
         ...f,
         x: f.x + f.dx,
         y: f.y + f.dy,
-        dx: f.x <= 20 || f.x >= 580 ? -f.dx : f.dx,
-        dy: f.y <= 20 || f.y >= 280 ? -f.dy : f.dy
+        dx: f.x <= 40 || f.x >= 560 ? -f.dx : Math.random() < 0.02 ? (Math.random() - 0.5) * 3 : f.dx,
+        dy: f.y <= 40 || f.y >= 260 ? -f.dy : Math.random() < 0.02 ? (Math.random() - 0.5) * 3 : f.dy
       })))
       
       if (lineActive) {
         setHookPos(prev => ({
-          x: prev.x + Math.sin(Date.now() * 0.003) * 2,
-          y: prev.y + Math.cos(Date.now() * 0.002) * 1.5
+          x: 50 + (Math.sin(Date.now() * 0.001) + 1) * 250,
+          y: 50 + (Math.cos(Date.now() * 0.0008) + 1) * 100
         }))
       }
       
@@ -137,22 +137,19 @@ function App() {
         <div>❤️ Lives: {lives}</div>
       </div>
       
-      <div style={{ width: '600px', height: '300px', background: 'rgba(0,100,200,0.6)', margin: '30px auto', position: 'relative', border: '4px solid #654321', borderRadius: '10px', overflow: 'hidden' }}>
+      <div style={{ width: '600px', height: '300px', background: 'rgba(0,100,200,0.6)', margin: '30px auto', position: 'relative', border: '4px solid #654321', borderRadius: '10px', overflow: 'visible' }}>
         {lineActive && (
           <>
-            <div style={{ position: 'absolute', left: '20px', top: '10px', width: '30px', height: '40px', background: '#8b4513', borderRadius: '5px 5px 0 0', zIndex: 5 }}>
-              <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', width: '15px', height: '15px', background: '#fdbcb4', borderRadius: '50%' }}></div>
-              <div style={{ position: 'absolute', top: '5px', right: '-5px', width: '2px', height: '15px', background: '#654321', transformOrigin: 'bottom', transform: `rotate(${Math.atan2(hookPos.y - 25, hookPos.x - 35) * 180 / Math.PI}deg)` }}></div>
-            </div>
+            <img src="/src/assets/fisherman.png" alt="fisherman" style={{ position: 'absolute', left: '-80px', top: '-20px', width: '100px', height: '100px', zIndex: 5, imageRendering: 'pixelated' }} />
             <svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 8 }}>
-              <line x1="35" y1="25" x2={hookPos.x} y2={hookPos.y} stroke="#654321" strokeWidth="2" />
+              <line x1="-45" y1="45" x2={hookPos.x} y2={hookPos.y} stroke="#654321" strokeWidth="2" />
             </svg>
             <div style={{ position: 'absolute', left: hookPos.x - 8 + 'px', top: hookPos.y - 8 + 'px', width: '16px', height: '16px', background: '#c0392b', borderRadius: '50%', border: '2px solid #fff', boxShadow: '0 0 10px rgba(192,57,43,0.8)', zIndex: 10 }}></div>
           </>
         )}
         
         {fish.map(f => (
-          <img key={f.id} src={f.img} alt="fish" style={{ position: 'absolute', left: f.x + 'px', top: f.y + 'px', width: f.size + 'px', height: f.size + 'px', transition: 'all 0.1s', imageRendering: 'pixelated' }} />
+          <img key={f.id} src={`/src/assets/${f.img}`} alt="fish" style={{ position: 'absolute', left: f.x + 'px', top: f.y + 'px', width: f.size + 'px', height: f.size + 'px', transition: 'all 0.1s', imageRendering: 'pixelated' }} onError={(e) => { e.target.style.display = 'none'; console.log('Image failed to load:', f.img); }} />
         ))}
         
 
